@@ -1,0 +1,1 @@
+source ~/.research_config
