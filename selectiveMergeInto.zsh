@@ -14,7 +14,7 @@ checkBranch() {
 }
 
 # Merge branch except files specified in .publishignore
-selectiveMerge() {
+selectiveMergeInto() {
     # Read the command-line argument, which is the branch to merge into
     branch="$1"
 
@@ -53,6 +53,7 @@ selectiveMerge() {
     if [ "$branch" = "main" ]; then
         # Make sure we are on the publish branch
         checkBranch publish
+        initial_branch="publish"
         if [ $? -ne 0 ]; then
           return 1
         fi
@@ -79,13 +80,12 @@ selectiveMerge() {
             if [ -z "$line" ] || [[ $line == \#* ]]; then
                 continue
             fi
-
             if git ls-tree HEAD "$line" > /dev/null 2>&1; then
                 type=$(git ls-tree HEAD "$line" | awk '{print $2}')
                 if [ "$type" = "blob" ]; then
                     # If it's a file, check it out directly
                     git checkout HEAD -- "$line"
-                elif [ "$type" = "tree" ]; then
+                else
                     # If it's a directory, checkout each file within it
                     git checkout HEAD -- "$line"/
                 fi
@@ -94,6 +94,7 @@ selectiveMerge() {
     elif [ "$branch" = "publish" ]; then
         # Make sure we are on the main branch
         checkBranch main
+        initial_branch="main"
         if [ $? -ne 0 ]; then
           return 1
         fi
@@ -120,8 +121,8 @@ selectiveMerge() {
             if [[ -n $line && ! $line =~ ^#.* ]]; then
                 # Check if the file/directory exists
                 if [ -e "$line" ]; then
-                    # Perform git rm operation
-                    git rm -rf "$line" > /dev/null 2>&1
+                    # Perform rm operation
+                    rm -rf "$line"
                 fi
             fi
         done < "$temp_publishignore"
@@ -134,12 +135,10 @@ selectiveMerge() {
     # Commit the merge
     echo "Committing changes..."
     git add --all
-    git commit -m "Merge branch publish with exceptions from .publishignore" > /dev/null 2>&1
-
-    # Print message to user
-    echo "Merge complete."
-
+    git commit -m "Merge $initial_branch into $branch with exceptions from .publishignore" > /dev/null 2>&1
+        
     # Check if the renv library is up to date
+    echo "Making sure renv is synchronized..."
     is_synchronized=$(Rscript -e '
     options(renv.verbose = FALSE)
     cat(renv::status()$synchronized)')
@@ -149,4 +148,8 @@ selectiveMerge() {
 
     # Remove the temporary file
     rm "$temp_publishignore"
+
+    # Print message to user
+    echo "Merge complete."
+
 }
