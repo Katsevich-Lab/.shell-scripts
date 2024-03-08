@@ -23,13 +23,13 @@ selectiveMerge() {
         echo "Invalid branch specified. Only 'main' or 'publish' are allowed."
         return 1
     fi
-    
+
     # Check if inside a Git repository
     if ! git rev-parse --is-inside-work-tree > /dev/null 2>&1; then
         echo "This is not a Git repository."
         return 1
     fi
-    
+
     # Make sure the repository is clean
     if [ -n "$(git status --porcelain)" ]; then
         echo "Please commit your changes before proceeding."
@@ -50,7 +50,7 @@ selectiveMerge() {
     echo "renv.lock" >> "$temp_publishignore"
     echo ".publishignore" >> "$temp_publishignore"
 
-    if [ "$branch" == "main" ]; then
+    if [ "$branch" = "main" ]; then
         # Make sure we are on the publish branch
         checkBranch publish
         if [ $? -ne 0 ]; then
@@ -59,7 +59,7 @@ selectiveMerge() {
 
         # Switch to the main branch
         git checkout main
-        
+
         # Append the contents of .publishignore to the temporary file
         if [ -f .publishignore ]; then
             cat .publishignore >> "$temp_publishignore"
@@ -68,7 +68,7 @@ selectiveMerge() {
             rm "$temp_publishignore"
             return 1
         fi
-        
+
         # Merge in the changes from publish, but do not commit yet
         git merge --no-commit --no-ff publish > /dev/null 2>&1
 
@@ -91,7 +91,7 @@ selectiveMerge() {
                 fi
             fi
         done < "$temp_publishignore"
-    elif [ "$branch" == "publish" ]; then
+    elif [ "$branch" = "publish" ]; then
         # Make sure we are on the main branch
         checkBranch main
         if [ $? -ne 0 ]; then
@@ -130,15 +130,15 @@ selectiveMerge() {
     # Synchronize renv
     echo "Synchronizing renv..."
     Rscript -e 'options(renv.verbose = FALSE); renv::snapshot()' > /dev/null 2>&1
-    
+
     # Commit the merge
     echo "Committing changes..."
     git add --all
     git commit -m "Merge branch publish with exceptions from .publishignore" > /dev/null 2>&1
-    
+
     # Print message to user
     echo "Merge complete."
-    
+
     # Check if the renv library is up to date
     is_synchronized=$(Rscript -e '
     options(renv.verbose = FALSE)
